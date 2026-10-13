@@ -1,0 +1,54 @@
+{
+  "name": "agent-action-auditor",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Deterministic auditing for agent traces and tool-call behavior.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Darren-dev141/agent-action-auditor.git"
+  },
+  "homepage": "https://github.com/Darren-dev141/agent-action-auditor#readme",
+  "bugs": {
+    "url": "https://github.com/Darren-dev141/agent-action-auditor/issues"
+  },
+  "files": [
+    "404.html",
+    "README.md",
+    "SPEC-v1.md",
+    "action.yml",
+    "app.js",
+    "audit.js",
+    "baseline.js",
+    "ci-gate.js",
+    "favicon.svg",
+    "hooks/",
+    "index.html",
+    "mcp-server.js",
+    "privacy.html",
+    "replay.js",
+    "rules.js",
+    "server.json",
+    "styles.css"
+  ],
+  "type": "commonjs",
+  "bin": {
+    "agent-action-auditor": "audit.js",
+    "agent-action-auditor-mcp": "mcp-server.js"
+  },
+  "scripts": {
+    "audit": "node audit.js",
+    "mcp": "node mcp-server.js",
+    "test": "node --test tests/*.test.js && node tests/validate-fixtures.js && node replay.js fixtures --determinism",
+    "security:scan": "node scripts/security-scan.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.3.1"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.3.1"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.darren-dev141/agent-action-auditor",
+  "title": "Agent Action Auditor",
+  "description": "Deterministic auditing for agent traces and tool-call behavior.",
+  "version": "0.1.0",
+  "websiteUrl": "https://github.com/Darren-dev141/agent-action-auditor",
+  "repository": {
+    "url": "https://github.com/Darren-dev141/agent-action-auditor",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "agent-action-auditor",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

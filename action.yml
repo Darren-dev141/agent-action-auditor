@@ -1,0 +1,29 @@
+name: Agent Action Auditor
+description: Audit agent traces for risky tool-call behavior in CI.
+author: Agent Action Auditor contributors
+inputs:
+  trace:
+    description: Trace file or directory to audit.
+    required: true
+  config:
+    description: Optional .auditor.yml path.
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Audit trace
+      shell: bash
+      env:
+        AAA_TRACE_INPUT: ${{ inputs.trace }}
+        AAA_CONFIG_INPUT: ${{ inputs.config }}
+      run: |
+        set -euo pipefail
+        args=(--trace "$AAA_TRACE_INPUT")
+        if [[ -n "$AAA_CONFIG_INPUT" ]]; then
+          args+=(--config "$AAA_CONFIG_INPUT")
+        fi
+        node "$GITHUB_ACTION_PATH/ci-gate.js" "${args[@]}"
+branding:
+  icon: shield
+  color: gray-dark
