@@ -1,0 +1,33 @@
+# Agent Action Auditor — GitLab CI.
+# The audit stage self-gates on the hand-written fixtures: the clean fixture
+# must pass the gate; the two deliberate-violation fixtures must go red.
+# Never gate on `node ci-gate.js --trace fixtures` (the directory run):
+# it exits 10 by design, because two of the three fixtures are violations.
+default:
+  image: node:22-slim          # engines: node >=20.19.0
+  cache:
+    key:
+      files: [package-lock.json]
+    paths: [.npm/]
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+
+stages: [test, audit]
+
+test:
+  stage: test
+  script:
+    - npm test
+
+audit:
+  stage: audit
+  script:
+    - node ci-gate.js --trace fixtures/fixture_clean.json
+    - |
+      code=0
+      node ci-gate.js --trace fixtures/fixture_violation.json || code=$?
+      [ "$code" -eq 10 ] || { echo "violation fixture: expected gate exit 10, got $code"; exit 1; }
+    - |
+      code=0
+      node ci-gate.js --trace fixtures/fixture_borderline.json || code=$?
+      [ "$code" -eq 10 ] || { echo "borderline fixture: expected gate exit 10, got $code"; exit 1; }
