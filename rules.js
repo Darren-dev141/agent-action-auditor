@@ -372,6 +372,8 @@
     else kind = 'PASS';
     return { kind, counts };
   }
+  // Process exit codes by verdict kind (2 stays reserved for parse/usage errors).
+  const EXIT = { CLEAN: 0, PASS: 0, REVIEW: 11, DO_NOT_DEPLOY: 10 };
   // Display label for a verdict kind; n = number of findings (PASS note count).
   function labelText(kind, n) {
     if (kind === 'CLEAN') return 'CLEAN — no findings';
@@ -415,7 +417,7 @@
 
   // Every rule id run_rules can emit. CI config, baselines and MCP validate against this list.
   const RULE_IDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
-  const api = { parse_trace, run_rules, render_report, verdict, classify, labelText, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
+  const api = { parse_trace, run_rules, render_report, verdict, classify, labelText, EXIT, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AAA = api;
 })(typeof window !== 'undefined' ? window : this);

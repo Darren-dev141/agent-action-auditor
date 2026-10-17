@@ -55,10 +55,10 @@ const findings = BL.apply_baseline(audit(file), loadBaseline(opt('--baseline')))
 const report = AAA.render_report(findings);
 
 if (argv.includes('--json')) {
-  console.log(JSON.stringify({ headline: report.headline, counts: report.counts, stats: findings.stats,
+  console.log(JSON.stringify({ headline: report.headline, kind: report.kind, counts: report.counts, stats: findings.stats,
     findings, suppressed: findings.suppressed }, null, 2));
 } else {
   console.log(report.headline);
   for (const line of report.lines) console.log(line);
 }
-process.exit(report.headline.includes('DO NOT DEPLOY') ? 10 : report.headline.includes('REVIEW BEFORE DEPLOY') ? 11 : 0);
+process.exit(AAA.EXIT[report.kind]);
