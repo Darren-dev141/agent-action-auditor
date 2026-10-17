@@ -4,7 +4,8 @@
 // expectations are complete. It does NOT run any rule.
 // Usage: node tests/validate-fixtures.js [fixtures/*.json]   (exit 0 = all valid)
 //
-// SECRET_PATTERNS must mirror SPEC-v1.md §13 D3 exactly.
+// SECRET_PATTERNS: anchored full-match form of SPEC-v1.md §13 D3 (the
+// engine carries the search form in rules.js; parity pinned by tests/patterns.test.js).
 'use strict';
 const fs = require('fs');
 const path = require('path');

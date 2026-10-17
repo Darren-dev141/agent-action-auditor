@@ -8,7 +8,8 @@
 (function (root) {
   'use strict';
 
-  // SPEC §13 D3 — must mirror tests/validate-fixtures.js
+  // SPEC §13 D3 pattern table, search form. The fixture validator carries
+  // the anchored full-match form; parity is pinned by tests/patterns.test.js.
   const SECRET_PATTERNS = [
     ['github_pat', /ghp_[A-Za-z0-9]{36}(?![A-Za-z0-9])/],
     ['aws_key_id', /AKIA[0-9A-Z]{16}(?![0-9A-Z])/],
