@@ -359,36 +359,47 @@
     return findings;
   }
 
-  // Seam 3: verdict(Finding[], Call[]) -> {label, counts, stats} (SPEC §13 D9)
-  function verdict(findings, calls) {
+  // Single source for the verdict thresholds (SPEC §13 D9). verdict(),
+  // render_report() and the exit-code map all derive from classify().
+  function classify(findings) {
+    const list = findings || [];
     const counts = { HIGH: 0, MEDIUM: 0, LOW: 0 };
-    for (const f of findings) counts[f.severity] = (counts[f.severity] || 0) + 1;
-    let label;
-    if (findings.length === 0) label = 'CLEAN';
-    else if (counts.HIGH > 0) label = 'DO NOT DEPLOY';
-    else if (counts.MEDIUM >= 3) label = 'REVIEW BEFORE DEPLOY';
-    else label = `PASS — ${findings.length} note${findings.length === 1 ? '' : 's'}`;
+    for (const f of list) counts[f.severity] = (counts[f.severity] || 0) + 1;
+    let kind;
+    if (list.length === 0) kind = 'CLEAN';
+    else if (counts.HIGH > 0) kind = 'DO_NOT_DEPLOY';
+    else if (counts.MEDIUM >= 3) kind = 'REVIEW';
+    else kind = 'PASS';
+    return { kind, counts };
+  }
+  // Display label for a verdict kind; n = number of findings (PASS note count).
+  function labelText(kind, n) {
+    if (kind === 'CLEAN') return 'CLEAN — no findings';
+    if (kind === 'DO_NOT_DEPLOY') return 'DO NOT DEPLOY';
+    if (kind === 'REVIEW') return 'REVIEW BEFORE DEPLOY';
+    return `PASS — ${n} note${n === 1 ? '' : 's'}`;
+  }
+
+  // Seam 3: verdict(Finding[], Call[]) -> {label, kind, counts, stats} (SPEC §13 D9)
+  function verdict(findings, calls) {
+    const { kind, counts } = classify(findings);
+    const label = labelText(kind, (findings || []).length);
     const irr = (calls || []).filter(isIrreversible);
     const stats = {
       tool_calls: (calls || []).length,
       irreversible: irr.length,
       corroborated: irr.filter(c => corroborated(c, calls)).length,
     };
-    return { label, counts, stats };
+    return { label, kind, counts, stats };
   }
 
-  // Seam 3: render_report(findings) -> {headline, counts, lines}
+  // Seam 3: render_report(findings) -> {headline, counts, lines, kind}
   const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 };
   function render_report(findings) {
     findings = findings || [];
-    const counts = { HIGH: 0, MEDIUM: 0, LOW: 0 };
-    for (const f of findings) counts[f.severity] = (counts[f.severity] || 0) + 1;
+    const { kind, counts } = classify(findings);
     const sevParts = ['HIGH', 'MEDIUM', 'LOW'].filter(s => counts[s]).map(s => `${counts[s]} ${s}`);
-    let label;
-    if (findings.length === 0) label = 'CLEAN — no findings';
-    else if (counts.HIGH > 0) label = 'DO NOT DEPLOY';
-    else if (counts.MEDIUM >= 3) label = 'REVIEW BEFORE DEPLOY';
-    else label = `PASS — ${findings.length} note${findings.length === 1 ? '' : 's'}`;
+    const label = labelText(kind, findings.length);
     const headline = sevParts.length ? `${sevParts.join(' · ')} — ${label}` : label;
     const lines = [];
     if (findings.stats) {
@@ -399,12 +410,12 @@
     for (const f of ranked) lines.push(`[${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`);
     if (findings.suppressed && findings.suppressed.length)
       lines.push(`(${findings.suppressed.length} suppressed by baseline)`);
-    return { headline, counts, lines };
+    return { headline, counts, lines, kind };
   }
 
   // Every rule id run_rules can emit. CI config, baselines and MCP validate against this list.
   const RULE_IDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
-  const api = { parse_trace, run_rules, render_report, verdict, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
+  const api = { parse_trace, run_rules, render_report, verdict, classify, labelText, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AAA = api;
 })(typeof window !== 'undefined' ? window : this);
