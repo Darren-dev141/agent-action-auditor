@@ -1,3 +1,4 @@
+// @ts-check
 /* Agent Action Auditor — rule engine. Classic script (SPEC §13 D1): no import/export.
    Browser: window.AAA.  Node: require('./rules.js').
 
@@ -8,8 +9,52 @@
 (function (root) {
   'use strict';
 
+  /**
+   * @typedef {Object} Call
+   * @property {string} id
+   * @property {number} index
+   * @property {string} tool
+   * @property {string} name
+   * @property {Object<string, any>} args
+   * @property {string} rawArgs
+   * @property {string|null} output
+   * @property {string|null} result
+   */
+  /** @typedef {Array<Call> & { finalMessage?: string }} Calls */
+  /**
+   * @typedef {Object} Finding
+   * @property {string} rule
+   * @property {string|null} [call_id]
+   * @property {'HIGH'|'MEDIUM'|'LOW'} severity
+   * @property {string} title
+   * @property {string} evidence
+   * @property {string} [fingerprint]
+   * @property {string} [fp_key]
+   */
+  /**
+   * @typedef {Object} Stats
+   * @property {number} tool_calls
+   * @property {number} irreversible
+   * @property {number} corroborated
+   */
+  /** @typedef {Array<Finding> & { stats?: Stats, suppressed?: Finding[] }} Findings */
+  /** @typedef {'CLEAN'|'PASS'|'REVIEW'|'DO_NOT_DEPLOY'} VerdictKind */
+  /**
+   * @typedef {Object} Counts
+   * @property {number} HIGH
+   * @property {number} MEDIUM
+   * @property {number} LOW
+   */
+  /**
+   * @typedef {Object} AuditResult
+   * @property {Finding[]} findings
+   * @property {Counts} counts
+   * @property {VerdictKind} kind
+   */
+
   // SPEC §13 D3 pattern table, search form. The fixture validator carries
   // the anchored full-match form; parity is pinned by tests/patterns.test.js.
+  /** @type {Array<[string, RegExp]>} */
   const SECRET_PATTERNS = [
     ['github_pat', /ghp_[A-Za-z0-9]{36}(?![A-Za-z0-9])/],
     ['aws_key_id', /AKIA[0-9A-Z]{16}(?![0-9A-Z])/],
@@ -78,6 +123,10 @@
   }
 
   // Seam 1: parse_trace(rawText) -> events[] | throws ParseError (D2)
+  /**
+   * @param {any} rawText raw trace text (or a pre-parsed trace object)
+   * @returns {Calls}
+   */
   function parse_trace(rawText) {
     let trace;
     if (rawText && typeof rawText === 'object') trace = rawText; // tolerate a pre-parsed object
@@ -90,7 +139,7 @@
     }
     if (trace && isClaudeMessages(trace.messages)) trace = fromClaudeMessages(trace.messages);
     if (!trace || !Array.isArray(trace.messages)) throw new ParseError('expected an object with a messages[] array');
-    const calls = [];
+    const calls = /** @type {Calls} */ ([]);
     const byId = new Map();
     trace.messages.forEach((m, i) => {
       if (!['system', 'user', 'assistant', 'tool'].includes(m.role))
@@ -119,11 +168,13 @@
     return calls;
   }
 
+  /** @param {string} text @returns {string[]} names of the D3 patterns present in text */
   const secretsIn = text => SECRET_PATTERNS.filter(([, re]) => re.test(text)).map(([n]) => n);
 
   // The one redaction implementation. Every output path (browser page, CLI,
   // CI gate, MCP server, hook session memory) masks secret-format values
   // through this: pattern names survive, values never do.
+  /** @param {any} text @returns {string} */
   const redactSecrets = text => SECRET_PATTERNS.reduce((acc, [name, re]) => acc.replace(new RegExp(re.source, 'g'), `[${name}]`), String(text));
 
   // ── Action classification (SPEC §13 D4–D6) ──────────────────────────────
@@ -343,8 +394,12 @@
 
   // Seam 2: run_rules(events) -> findings[]  each: {rule, severity, title, evidence}
   // stats ride on the array so render_report(findings) keeps its single-arg seam.
+  /**
+   * @param {Calls} calls
+   * @returns {Findings}
+   */
   function run_rules(calls) {
-    const findings = Object.values(RULES).flatMap(r => r(calls));
+    const findings = /** @type {Findings} */ (Object.values(RULES).flatMap(r => r(calls)));
     const byId = new Map(calls.map(c => [c.id, c]));
     for (const f of findings) {
       f.fingerprint = f.fp_key ? `${f.rule}:${fnv1a(f.fp_key)}` : fingerprintOf(f.rule, f.call_id ? byId.get(f.call_id) : null);
@@ -364,8 +419,13 @@
   // R1 (uncorroborated irreversible). run_rules' R1/R4 delegate here, and
   // the live paths (PreToolUse hook, MCP check-a-call) call it directly, so
   // inline and batch findings can never drift.
+  /**
+   * @param {Call} call
+   * @param {Call[]} [priorCalls]
+   * @returns {Finding[]}
+   */
   function checkCall(call, priorCalls) {
-    const findings = [];
+    const findings = /** @type {Finding[]} */ ([]);
     const hits = secretsIn(call.rawArgs);
     if (hits.length) findings.push({ rule: 'R4', call_id: call.id, severity: 'HIGH', title: `secret-format string in arguments: ${hits.join(', ')}`, evidence: evidenceSpan(call) });
     if (isIrreversible(call) && !corroborated(call, (priorCalls || []).concat(call)))
@@ -375,10 +435,15 @@
 
   // Single source for the verdict thresholds (SPEC §13 D9). verdict(),
   // render_report() and the exit-code map all derive from classify().
+  /**
+   * @param {Finding[]} [findings]
+   * @returns {{ kind: VerdictKind, counts: Counts }}
+   */
   function classify(findings) {
     const list = findings || [];
     const counts = { HIGH: 0, MEDIUM: 0, LOW: 0 };
     for (const f of list) counts[f.severity] = (counts[f.severity] || 0) + 1;
+    /** @type {VerdictKind} */
     let kind;
     if (list.length === 0) kind = 'CLEAN';
     else if (counts.HIGH > 0) kind = 'DO_NOT_DEPLOY';
@@ -389,6 +454,11 @@
   // Process exit codes by verdict kind (2 stays reserved for parse/usage errors).
   const EXIT = { CLEAN: 0, PASS: 0, REVIEW: 11, DO_NOT_DEPLOY: 10 };
   // Display label for a verdict kind; n = number of findings (PASS note count).
+  /**
+   * @param {VerdictKind} kind
+   * @param {number} n
+   * @returns {string}
+   */
   function labelText(kind, n) {
     if (kind === 'CLEAN') return 'CLEAN — no findings';
     if (kind === 'DO_NOT_DEPLOY') return 'DO NOT DEPLOY';
@@ -398,6 +468,10 @@
 
   // AuditResult: the one result shape every consumer reads —
   // { findings, counts, kind }, all derived from classify().
+  /**
+   * @param {Finding[]} [findings]
+   * @returns {AuditResult}
+   */
   function auditResult(findings) {
     const list = findings || [];
     const { kind, counts } = classify(list);
@@ -405,6 +479,11 @@
   }
 
   // Seam 3: verdict(Finding[], Call[]) -> {label, kind, counts, stats} (SPEC §13 D9)
+  /**
+   * @param {Finding[]} findings
+   * @param {Call[]} [calls]
+   * @returns {{ label: string, kind: VerdictKind, counts: Counts, stats: Stats }}
+   */
   function verdict(findings, calls) {
     const { kind, counts } = auditResult(findings);
     const label = labelText(kind, (findings || []).length);
@@ -419,6 +498,10 @@
 
   // Seam 3: render_report(findings) -> {headline, counts, lines, kind}
   const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  /**
+   * @param {Findings} [findings]
+   * @returns {{ headline: string, counts: Counts, lines: string[], kind: VerdictKind }}
+   */
   function render_report(findings) {
     findings = findings || [];
     const { kind, counts } = auditResult(findings);
@@ -441,5 +524,5 @@
   const RULE_IDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
   const api = { parse_trace, run_rules, checkCall, render_report, verdict, classify, labelText, auditResult, EXIT, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, redactSecrets, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.AAA = api;
+  else /** @type {any} */ (root).AAA = api;
 })(typeof window !== 'undefined' ? window : this);
