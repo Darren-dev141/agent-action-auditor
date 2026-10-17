@@ -236,7 +236,6 @@
   }
   const isWrite = c => WRITE_TOOL.test(c.name) || String(c.args.method || '').toUpperCase() === 'POST';
 
-  // Paths/recipients an action targets
   function targetsOf(c) {
     const out = [];
     const cmd = cmdOf(c);

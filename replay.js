@@ -37,7 +37,6 @@ function readTraces(input) {
   return out;
 }
 
-// audit one trace with a given engine; returns {findings, error}
 function auditWith(engine, raw, baseline) {
   try { return { findings: BL.apply_baseline(engine.run_rules(engine.parse_trace(raw)), baseline || BL.empty()) }; }
   catch (e) { return { error: e.message }; }
@@ -49,7 +48,6 @@ const snapshot = (engine, traces) => JSON.stringify(traces.map(t => {
   return r.error ? { e: r.error } : r.findings.map(f => [f.rule, f.severity, f.fingerprint, f.call_id || null]);
 }));
 
-// diff two engines over the same traces: which traces gain/lose findings, and why
 function diffEngines(a, b, traces) {
   return traces.map(t => {
     const ra = auditWith(a, t.raw), rb = auditWith(b, t.raw);
@@ -61,7 +59,6 @@ function diffEngines(a, b, traces) {
   });
 }
 
-// model-upgrade mode: count violations by rule+severity per model id, diff old→new
 function diffModels(engine, traces, oldId, newId) {
   const tally = id => {
     const c = {}; let n = 0;
