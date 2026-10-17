@@ -40,10 +40,7 @@ function validateBaseline(baseline) {
   return baseline;
 }
 function rawTrace(trace) { return typeof trace === 'string' ? trace : JSON.stringify(trace); }
-function redactString(s) {
-  return AAA.SECRET_PATTERNS.reduce((acc, [name, re]) => acc.replace(new RegExp(re.source, 'g'), `[${name}]`), String(s));
-}
-function safeResult(value) { return JSON.parse(redactString(JSON.stringify(value))); }
+function safeResult(value) { return JSON.parse(AAA.redactSecrets(JSON.stringify(value))); }
 function toolResult(value, isError = false) {
   const safe = safeResult(value);
   return { content: [{ type: 'text', text: JSON.stringify(safe, null, 2) }], structuredContent: safe, ...(isError ? { isError: true } : {}) };

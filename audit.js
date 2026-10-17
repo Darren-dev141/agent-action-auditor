@@ -35,7 +35,7 @@ if (positional[0] === 'accept') {
   let next;
   try { next = BL.accept(loadBaseline(file), finding, reason); } catch (e) { die(e.message); }
   fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
-  console.log(`accepted ${fp} (${finding.rule}) into ${file}`);
+  console.log(AAA.redactSecrets(`accepted ${fp} (${finding.rule}) into ${file}`));
   process.exit(0);
 }
 
@@ -43,8 +43,8 @@ if (positional[0] === 'baseline-diff') {
   const [, a, b] = positional;
   if (!a || !b) die('usage: node audit.js baseline-diff <old.json> <new.json>');
   const d = BL.diff_baselines(readJson(a, 'baseline'), readJson(b, 'baseline'));
-  for (const e of d.added) console.log(`+ ${e.fingerprint} ${e.rule} — ${e.reason}`);
-  for (const e of d.removed) console.log(`- ${e.fingerprint} ${e.rule} — ${e.reason}`);
+  for (const e of d.added) console.log(AAA.redactSecrets(`+ ${e.fingerprint} ${e.rule} — ${e.reason}`));
+  for (const e of d.removed) console.log(AAA.redactSecrets(`- ${e.fingerprint} ${e.rule} — ${e.reason}`));
   if (!d.added.length && !d.removed.length) console.log('no changes');
   process.exit(0);
 }
@@ -55,10 +55,10 @@ const findings = BL.apply_baseline(audit(file), loadBaseline(opt('--baseline')))
 const report = AAA.render_report(findings);
 
 if (argv.includes('--json')) {
-  console.log(JSON.stringify({ headline: report.headline, kind: report.kind, counts: report.counts, stats: findings.stats,
-    findings, suppressed: findings.suppressed }, null, 2));
+  console.log(AAA.redactSecrets(JSON.stringify({ headline: report.headline, kind: report.kind, counts: report.counts, stats: findings.stats,
+    findings, suppressed: findings.suppressed }, null, 2)));
 } else {
-  console.log(report.headline);
-  for (const line of report.lines) console.log(line);
+  console.log(AAA.redactSecrets(report.headline));
+  for (const line of report.lines) console.log(AAA.redactSecrets(line));
 }
 process.exit(AAA.EXIT[report.kind]);

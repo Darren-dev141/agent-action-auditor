@@ -121,6 +121,11 @@
 
   const secretsIn = text => SECRET_PATTERNS.filter(([, re]) => re.test(text)).map(([n]) => n);
 
+  // The one redaction implementation. Every output path (browser page, CLI,
+  // CI gate, MCP server, hook session memory) masks secret-format values
+  // through this: pattern names survive, values never do.
+  const redactSecrets = text => SECRET_PATTERNS.reduce((acc, [name, re]) => acc.replace(new RegExp(re.source, 'g'), `[${name}]`), String(text));
+
   // ── Action classification (SPEC §13 D4–D6) ──────────────────────────────
   const SHELL_TOOLS = ['terminal', 'shell', 'bash', 'run_command', 'execute_command', 'powershell'];
   const IRREVERSIBLE_TOOL = /^(send_|submit_|purchase|delete_|post_)|_delete$/;
@@ -426,7 +431,7 @@
 
   // Every rule id run_rules can emit. CI config, baselines and MCP validate against this list.
   const RULE_IDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
-  const api = { parse_trace, run_rules, render_report, verdict, classify, labelText, auditResult, EXIT, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
+  const api = { parse_trace, run_rules, render_report, verdict, classify, labelText, auditResult, EXIT, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, redactSecrets, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AAA = api;
 })(typeof window !== 'undefined' ? window : this);

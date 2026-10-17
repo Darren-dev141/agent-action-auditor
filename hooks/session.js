@@ -30,7 +30,7 @@ function toCall(payload, index) {
   return { id: `live_${index}`, index, tool: name, name, args, rawArgs, output: null, result: null };
 }
 
-const redact = s => AAA.SECRET_PATTERNS.reduce((acc, [n, re]) => acc.replace(new RegExp(re.source, 'g'), `[${n}]`), s);
+const redact = AAA.redactSecrets;
 const dir = () => process.env.AAA_SESSION_DIR || path.join(os.tmpdir(), 'aaa-sessions');
 const sessionKey = id => crypto.createHash('sha256').update(String(id)).digest('hex');
 const fileFor = id => path.join(dir(), sessionKey(id) + '.jsonl');

@@ -51,12 +51,12 @@ function processFile(filePath, config, baseline) {
   selected.stats = all.stats;
   const findings = BL.apply_baseline(selected, baseline);
   const report = AAA.render_report(findings);
-  console.log(`${filePath}: ${report.headline}`);
-  for (const line of report.lines) console.log(line);
+  console.log(AAA.redactSecrets(`${filePath}: ${report.headline}`));
+  for (const line of report.lines) console.log(AAA.redactSecrets(line));
   for (const f of findings) {
     const line = f.call_id ? raw.split('\n').findIndex(l => l.includes(JSON.stringify(f.call_id))) + 1 : 1;
     const kind = f.severity === 'HIGH' ? 'error' : 'warning';
-    console.log(`::${kind} file=${escapeProperty(filePath.replace(/\\\\/g, '/'))},line=${Math.max(1, line)},title=${escapeProperty(f.rule)}::${escapeData(f.title)}`);
+    console.log(AAA.redactSecrets(`::${kind} file=${escapeProperty(filePath.replace(/\\\\/g, '/'))},line=${Math.max(1, line)},title=${escapeProperty(f.rule)}::${escapeData(f.title)}`));
   }
   return findings.some(f => levels[f.severity] >= levels[config.severity]) ? 10 : 0;
 }

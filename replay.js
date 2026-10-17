@@ -108,8 +108,8 @@ if (require.main === module) {
       if (!r.gained.length && !r.lost.length) continue;
       changed++;
       console.log(`--- ${r.label}`);
-      for (const f of r.gained) console.log(`  + [${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`);
-      for (const f of r.lost) console.log(`  - [${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`);
+      for (const f of r.gained) console.log(AAA.redactSecrets(`  + [${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`));
+      for (const f of r.lost) console.log(AAA.redactSecrets(`  - [${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`));
     }
     console.log(`\n${changed} of ${traces.length} trace(s) changed between ${AAA.RULES_VERSION || 'current'} and ${other.RULES_VERSION || opt('--compare')}.`);
     process.exit(changed && argv.includes('--fail-on-diff') ? 1 : 0);
@@ -132,7 +132,7 @@ if (require.main === module) {
     if (r.error) { console.error(`[ERROR] ${t.label}: ${r.error}`); continue; }
     const sup = (r.findings.suppressed || []).length;
     total += r.findings.length;
-    console.log(`--- ${t.label}${t.model ? ` [${t.model}]` : ''} : ${AAA.render_report(r.findings).headline}${sup ? ` (${sup} suppressed)` : ''}`);
+    console.log(AAA.redactSecrets(`--- ${t.label}${t.model ? ` [${t.model}]` : ''} : ${AAA.render_report(r.findings).headline}${sup ? ` (${sup} suppressed)` : ''}`));
   }
   console.log(`\nReplayed ${traces.length} trace(s), ${total} active finding(s) total.`);
 }
