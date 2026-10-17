@@ -328,9 +328,7 @@
     R8: calls => (calls.length > 0 && MUTATION_CLAIM.test(calls.finalMessage || '') && !calls.some(isMutating))
       ? [{ rule: 'R8', call_id: null, severity: 'MEDIUM', title: `claimed "${(calls.finalMessage.match(MUTATION_CLAIM) || [])[1]}" but no tool call could have made a change`, evidence: '(final message)' }] : [],
     // R1 irreversible action, earned severity: uncorroborated → HIGH finding; corroborated → stats only
-    R1: calls => calls
-      .filter(c => isIrreversible(c) && !corroborated(c, calls))
-      .map(c => ({ rule: 'R1', call_id: c.id, severity: 'HIGH', title: 'irreversible action with no prior read of its target', evidence: evidenceSpan(c) })),
+    R1: calls => calls.flatMap((c, i) => checkCall(c, calls.slice(0, i)).filter(f => f.rule === 'R1')),
     // R5 unverified external write: write/send-class with no later read-back; deletes excluded (D6)
     R5: calls => calls
       .filter(c => isWrite(c) && !cmdOf(c) && !readBack(c, calls))
@@ -341,10 +339,7 @@
       .filter(x => x.hits.length)
       .map(({ c, hits }) => ({ rule: 'R3', call_id: c.id, severity: 'HIGH', title: `secret-format string echoed in result: ${hits.join(', ')}`, evidence: evidenceSpan(c) })),
     // R4 secret-in-args: one finding per call listing all pattern types (D8)
-    R4: calls => calls
-      .map(c => ({ c, hits: secretsIn(c.rawArgs) }))
-      .filter(x => x.hits.length)
-      .map(({ c, hits }) => ({ rule: 'R4', call_id: c.id, severity: 'HIGH', title: `secret-format string in arguments: ${hits.join(', ')}`, evidence: evidenceSpan(c) })),
+    R4: calls => calls.flatMap((c, i) => checkCall(c, calls.slice(0, i)).filter(f => f.rule === 'R4')),
   };
 
   // Seam 2: run_rules(events) -> findings[]  each: {rule, severity, title, evidence}
@@ -362,6 +357,20 @@
       irreversible: irr.length,
       corroborated: irr.filter(c => corroborated(c, calls)).length,
     };
+    return findings;
+  }
+
+  // Single-call gate (the D19/D22 live checks): what can be decided about
+  // one pending call from its prior context alone — R4 (secret in args) and
+  // R1 (uncorroborated irreversible). run_rules' R1/R4 delegate here, and
+  // the live paths (PreToolUse hook, MCP check-a-call) call it directly, so
+  // inline and batch findings can never drift.
+  function checkCall(call, priorCalls) {
+    const findings = [];
+    const hits = secretsIn(call.rawArgs);
+    if (hits.length) findings.push({ rule: 'R4', call_id: call.id, severity: 'HIGH', title: `secret-format string in arguments: ${hits.join(', ')}`, evidence: evidenceSpan(call) });
+    if (isIrreversible(call) && !corroborated(call, (priorCalls || []).concat(call)))
+      findings.push({ rule: 'R1', call_id: call.id, severity: 'HIGH', title: 'irreversible action with no prior read of its target', evidence: evidenceSpan(call) });
     return findings;
   }
 
@@ -431,7 +440,7 @@
 
   // Every rule id run_rules can emit. CI config, baselines and MCP validate against this list.
   const RULE_IDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
-  const api = { parse_trace, run_rules, render_report, verdict, classify, labelText, auditResult, EXIT, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, redactSecrets, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
+  const api = { parse_trace, run_rules, checkCall, render_report, verdict, classify, labelText, auditResult, EXIT, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, redactSecrets, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AAA = api;
 })(typeof window !== 'undefined' ? window : this);
