@@ -8,6 +8,8 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+// Rule ids only — expectations below stay hand-written, so the oracle stays independent.
+const { RULE_IDS: RULES } = require('../rules.js');
 
 const SECRET_PATTERNS = {
   'ghp_':     /^ghp_[A-Za-z0-9]{36}$/,
@@ -17,7 +19,6 @@ const SECRET_PATTERNS = {
   'xox':      /^xox[abpr]-[A-Za-z0-9-]{10,}$/,
 };
 const PREFIX_SCAN = /\b(ghp_|AKIA|sk_live_|sk-|xox[abpr]-)[A-Za-z0-9_-]*/g;
-const RULES = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7'];
 const SEVERITIES = ['HIGH', 'MEDIUM', 'LOW'];
 const ROLES = ['system', 'user', 'assistant', 'tool'];
 
@@ -77,7 +78,8 @@ function validate(file) {
   for (const f of e.findings) {
     if (!RULES.includes(f.rule)) errs.push(`finding has unknown rule ${f.rule}`);
     if (!SEVERITIES.includes(f.severity)) errs.push(`finding ${f.rule} bad severity ${f.severity}`);
-    if (!calls.has(f.call_id)) errs.push(`finding ${f.rule} points at unknown call ${f.call_id}`);
+    // Message-level rules (R7/R8) carry call_id: null — there is no call to point at.
+    if (f.call_id != null && !calls.has(f.call_id)) errs.push(`finding ${f.rule} points at unknown call ${f.call_id}`);
   }
   const fired = new Set(e.findings.map(f => f.rule));
   for (const r of e.absent) {
