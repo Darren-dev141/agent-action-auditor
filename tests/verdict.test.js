@@ -47,6 +47,15 @@ test('D2: classify kinds follow the D9 thresholds', () => {
   assert.deepEqual(AAA.classify(mk(['HIGH', 'MEDIUM', 'LOW'])).counts, { HIGH: 1, MEDIUM: 1, LOW: 1 });
 });
 
+test('AuditResult: {findings, counts, kind} in one object', () => {
+  const findings = mk(['HIGH', 'MEDIUM']);
+  const r = AAA.auditResult(findings);
+  assert.equal(r.findings, findings);
+  assert.equal(r.kind, 'DO_NOT_DEPLOY');
+  assert.deepEqual(r.counts, { HIGH: 1, MEDIUM: 1, LOW: 0 });
+  assert.equal(AAA.auditResult([]).kind, 'CLEAN');
+});
+
 test('D2: verdict() and render_report() derive one label from classify()', () => {
   for (const sevs of corpus) {
     const findings = mk(sevs);

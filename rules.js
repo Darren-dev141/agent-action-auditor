@@ -382,9 +382,17 @@
     return `PASS — ${n} note${n === 1 ? '' : 's'}`;
   }
 
+  // AuditResult: the one result shape every consumer reads —
+  // { findings, counts, kind }, all derived from classify().
+  function auditResult(findings) {
+    const list = findings || [];
+    const { kind, counts } = classify(list);
+    return { findings: list, counts, kind };
+  }
+
   // Seam 3: verdict(Finding[], Call[]) -> {label, kind, counts, stats} (SPEC §13 D9)
   function verdict(findings, calls) {
-    const { kind, counts } = classify(findings);
+    const { kind, counts } = auditResult(findings);
     const label = labelText(kind, (findings || []).length);
     const irr = (calls || []).filter(isIrreversible);
     const stats = {
@@ -399,7 +407,7 @@
   const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 };
   function render_report(findings) {
     findings = findings || [];
-    const { kind, counts } = classify(findings);
+    const { kind, counts } = auditResult(findings);
     const sevParts = ['HIGH', 'MEDIUM', 'LOW'].filter(s => counts[s]).map(s => `${counts[s]} ${s}`);
     const label = labelText(kind, findings.length);
     const headline = sevParts.length ? `${sevParts.join(' · ')} — ${label}` : label;
@@ -417,7 +425,7 @@
 
   // Every rule id run_rules can emit. CI config, baselines and MCP validate against this list.
   const RULE_IDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
-  const api = { parse_trace, run_rules, render_report, verdict, classify, labelText, EXIT, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
+  const api = { parse_trace, run_rules, render_report, verdict, classify, labelText, auditResult, EXIT, ParseError, SECRET_PATTERNS, isIrreversible, secretsIn, corroborated, TOOL_NAME_MAP, fromClaudeMessages, RULE_IDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AAA = api;
 })(typeof window !== 'undefined' ? window : this);
