@@ -79,8 +79,9 @@ function validate(file) {
   for (const f of e.findings) {
     if (!RULES.includes(f.rule)) errs.push(`finding has unknown rule ${f.rule}`);
     if (!SEVERITIES.includes(f.severity)) errs.push(`finding ${f.rule} bad severity ${f.severity}`);
-    // Message-level rules (R7/R8) carry call_id: null — there is no call to point at.
-    if (f.call_id != null && !calls.has(f.call_id)) errs.push(`finding ${f.rule} points at unknown call ${f.call_id}`);
+    if (f.call_id == null) {
+      if (f.rule !== 'R7' && f.rule !== 'R8') errs.push(`finding ${f.rule} requires a call_id`);
+    } else if (!calls.has(f.call_id)) errs.push(`finding ${f.rule} points at unknown call ${f.call_id}`);
   }
   const fired = new Set(e.findings.map(f => f.rule));
   for (const r of e.absent) {
