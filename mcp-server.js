@@ -40,10 +40,7 @@ function validateBaseline(baseline) {
   return baseline;
 }
 function rawTrace(trace) { return typeof trace === 'string' ? trace : JSON.stringify(trace); }
-function redactString(s) {
-  return AAA.SECRET_PATTERNS.reduce((acc, [name, re]) => acc.replace(new RegExp(re.source, 'g'), `[${name}]`), String(s));
-}
-function safeResult(value) { return JSON.parse(redactString(JSON.stringify(value))); }
+function safeResult(value) { return JSON.parse(AAA.redactSecrets(JSON.stringify(value))); }
 function toolResult(value, isError = false) {
   const safe = safeResult(value);
   return { content: [{ type: 'text', text: JSON.stringify(safe, null, 2) }], structuredContent: safe, ...(isError ? { isError: true } : {}) };
@@ -98,11 +95,7 @@ function createServer() {
       requireBounded(input);
       const prior = (input.prior_calls || []).map((c, i) => normalizeCall(c, i));
       const call = normalizeCall(input.call, prior.length);
-      const findings = [];
-      const hits = AAA.secretsIn(call.rawArgs);
-      if (hits.length) findings.push({ rule: 'R4', severity: 'HIGH', title: `secret-format string in arguments: ${hits.join(', ')}` });
-      if (AAA.isIrreversible(call) && !AAA.corroborated(call, prior.concat(call)))
-        findings.push({ rule: 'R1', severity: 'HIGH', title: `irreversible ${call.name} with no prior read of its target` });
+      const findings = AAA.checkCall(call, prior).map(({ rule, severity, title }) => ({ rule, severity, title }));
       return toolResult({ decision: findings.length ? 'warn' : 'allow', would_block_in_block_mode: findings.length > 0, findings });
     } catch (e) { return toolResult({ error: e.message }, true); }
   });

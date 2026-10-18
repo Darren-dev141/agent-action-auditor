@@ -4,10 +4,13 @@
 // expectations are complete. It does NOT run any rule.
 // Usage: node tests/validate-fixtures.js [fixtures/*.json]   (exit 0 = all valid)
 //
-// SECRET_PATTERNS must mirror SPEC-v1.md §13 D3 exactly.
+// SECRET_PATTERNS: anchored full-match form of SPEC-v1.md §13 D3 (the
+// engine carries the search form in rules.js; parity pinned by tests/patterns.test.js).
 'use strict';
 const fs = require('fs');
 const path = require('path');
+// Rule ids only — expectations below stay hand-written, so the oracle stays independent.
+const { RULE_IDS: RULES } = require('../rules.js');
 
 const SECRET_PATTERNS = {
   'ghp_':     /^ghp_[A-Za-z0-9]{36}$/,
@@ -17,7 +20,6 @@ const SECRET_PATTERNS = {
   'xox':      /^xox[abpr]-[A-Za-z0-9-]{10,}$/,
 };
 const PREFIX_SCAN = /\b(ghp_|AKIA|sk_live_|sk-|xox[abpr]-)[A-Za-z0-9_-]*/g;
-const RULES = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7'];
 const SEVERITIES = ['HIGH', 'MEDIUM', 'LOW'];
 const ROLES = ['system', 'user', 'assistant', 'tool'];
 
@@ -77,7 +79,9 @@ function validate(file) {
   for (const f of e.findings) {
     if (!RULES.includes(f.rule)) errs.push(`finding has unknown rule ${f.rule}`);
     if (!SEVERITIES.includes(f.severity)) errs.push(`finding ${f.rule} bad severity ${f.severity}`);
-    if (!calls.has(f.call_id)) errs.push(`finding ${f.rule} points at unknown call ${f.call_id}`);
+    if (f.call_id == null) {
+      if (f.rule !== 'R7' && f.rule !== 'R8') errs.push(`finding ${f.rule} requires a call_id`);
+    } else if (!calls.has(f.call_id)) errs.push(`finding ${f.rule} points at unknown call ${f.call_id}`);
   }
   const fired = new Set(e.findings.map(f => f.rule));
   for (const r of e.absent) {

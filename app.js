@@ -7,7 +7,7 @@ const error=$('error'), warning=$('secret-warning');
 const LIMIT=1048576;
 let reportText='';
 const patterns=AAA.SECRET_PATTERNS.map(([,re])=>re);
-const mask=value=>patterns.reduce((text,re)=>text.replace(new RegExp(re.source,'g'),'[REDACTED]'),String(value));
+const mask=value=>AAA.redactSecrets(value);
 const hasSecret=text=>patterns.some(re=>re.test(text));
 // Fixtures store secret-shaped values as JSON unicode escapes so the repo
 // text does not contain a literal key. The warning follows the decoded trace.
