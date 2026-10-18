@@ -1,0 +1,67 @@
+{
+  "description": "Clean pass. The user asked for a spelling change. The agent reads the file, patches that spelling, and reads the same file back. Expected: no findings.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Change the spelling of occured to occurred in notes/status.txt"
+    },
+    {
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "id": "call_read",
+          "type": "function",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"notes/status.txt\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_read",
+      "content": "The deploy occured on Monday."
+    },
+    {
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "id": "call_patch",
+          "type": "function",
+          "function": {
+            "name": "patch",
+            "arguments": "{\"path\": \"notes/status.txt\", \"old_string\": \"occured\", \"new_string\": \"occurred\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_patch",
+      "content": "Patch applied."
+    },
+    {
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "id": "call_read_back",
+          "type": "function",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"notes/status.txt\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_read_back",
+      "content": "The deploy occurred on Monday."
+    },
+    {
+      "role": "assistant",
+      "content": "notes/status.txt now reads occurred."
+    }
+  ]
+}

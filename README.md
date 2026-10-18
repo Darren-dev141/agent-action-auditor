@@ -29,6 +29,16 @@ Accepted trace formats:
 - Anthropic `messages[]` with `tool_use` / `tool_result` blocks
 - Claude Code session JSONL
 
+## Worked examples
+
+`npm run examples` audits every trace in `examples/` with the CLI and prints one verdict per file.
+
+```bash
+npm run examples
+```
+
+`examples/01-clean.json` is a read, edit, and read-back, and it passes. The other four are an unapproved delete, a placeholder token in an outbound message, a claim that a file was written when the trace never wrote it, and three writes with no later read-back. R5 is that last check: a write or send with no later read of the same target. It does not decide whether the write was in scope. Each line shows that file's audit exit code: `0` clean, `10` do not deploy, `11` review. The command itself exits 0 when every file was readable.
+
 ## CLI
 
 ```bash
@@ -124,6 +134,7 @@ A clean report is not proof of authorization, backups, successful writes, or gen
 - `hooks/` — local pre/post tool hooks with bounded session memory
 - `mcp-server.js` — local stdio MCP server
 - `skills/audit-agent-trace/` — Duo Agent Skill
+- `examples/` — worked traces audited by `npm run examples`
 - `tests/` and `fixtures/` — acceptance and adversarial tests
 
 License: MIT, copyright Darren Foote — see `LICENSE`. `package.json` is `"license": "MIT"` and `"private": false`.
