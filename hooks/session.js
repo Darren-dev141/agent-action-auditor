@@ -1,3 +1,4 @@
+// @ts-check
 // V2-1 hook support: Claude Code payload → engine call shape, plus bounded,
 // private per-session memory so live R1 can see earlier reads.
 'use strict';
@@ -18,6 +19,11 @@ function plainObject(value) {
   return out;
 }
 
+/**
+ * @param {any} payload Claude Code hook payload ({tool_name, tool_input} or {tool, args} shapes)
+ * @param {number} index position in the session's call sequence
+ * @returns {any} engine Call shape (see rules.js)
+ */
 function toCall(payload, index) {
   const raw = payload.tool_name || (payload.tool && payload.tool.name) || '';
   const name = NAME_MAP[String(raw).toLowerCase()] || String(raw).toLowerCase();
@@ -30,7 +36,7 @@ function toCall(payload, index) {
   return { id: `live_${index}`, index, tool: name, name, args, rawArgs, output: null, result: null };
 }
 
-const redact = s => AAA.SECRET_PATTERNS.reduce((acc, [n, re]) => acc.replace(new RegExp(re.source, 'g'), `[${n}]`), s);
+const redact = AAA.redactSecrets;
 const dir = () => process.env.AAA_SESSION_DIR || path.join(os.tmpdir(), 'aaa-sessions');
 const sessionKey = id => crypto.createHash('sha256').update(String(id)).digest('hex');
 const fileFor = id => path.join(dir(), sessionKey(id) + '.jsonl');
@@ -62,6 +68,10 @@ function openForAppend(file) {
   catch (e) { if (e.code !== 'EEXIST') throw e; return safeExistingFile(file); }
 }
 
+/**
+ * @param {string} id session_id (hashed before use as a filename, D23)
+ * @returns {any[]} prior calls for the session, oldest first
+ */
 function load(id) {
   if (!id) return [];
   try {
@@ -80,6 +90,10 @@ function load(id) {
   } catch { return []; }
 }
 
+/**
+ * @param {string} id session_id
+ * @param {any} call engine Call shape; args are redacted before write
+ */
 function append(id, call) {
   if (!id) return;
   const args = JSON.parse(redact(JSON.stringify(call.args)));

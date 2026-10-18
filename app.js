@@ -7,7 +7,7 @@ const error=$('error'), warning=$('secret-warning');
 const LIMIT=1048576;
 let reportText='';
 const patterns=AAA.SECRET_PATTERNS.map(([,re])=>re);
-const mask=value=>patterns.reduce((text,re)=>text.replace(new RegExp(re.source,'g'),'[REDACTED]'),String(value));
+const mask=value=>AAA.redactSecrets(value);
 const hasSecret=text=>patterns.some(re=>re.test(text));
 const decision={R1:'Review authorization and the target before any irreversible action. A prior read alone is not permission.',R2:'Inspect repeated calls and stop an unintended retry loop.',R3:'Remove secret echoes from tool results; rotate credentials if exposed.',R4:'Avoid literal credentials in tool arguments; use a credential vault or scoped secret injection.',R5:'Read back the exact external target and verify the result before claiming success.',R6:'Check whether the operation executed already; use an idempotency key before retrying.',R7:'Attach execution evidence, or change the final message to state that work was not performed.'};
 const example={messages:[{role:'user',content:'Read the project notes.'},{role:'assistant',tool_calls:[{id:'example_read',type:'function',function:{name:'read_file',arguments:'{"path":"notes.md"}'}}]},{role:'tool',tool_call_id:'example_read',content:'Project notes read successfully.'},{role:'assistant',content:'Read the notes.'}]};

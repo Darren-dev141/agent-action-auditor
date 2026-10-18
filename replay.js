@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 // Agent Action Auditor — V2-5 regression replay (v2-spec §V2-5, SPEC D17).
 // Usage:
 //   node replay.js <trace.json|archive.ndjson|dir> [--baseline <file>]           per-trace headlines
@@ -12,8 +13,21 @@ const fs = require('fs');
 const path = require('path');
 const BL = require('./baseline.js');
 
+/**
+ * @typedef {Object} TraceInput
+ * @property {string} label
+ * @property {string} raw
+ * @property {string} [model]
+ * @property {string} [timestamp]
+ */
+/** @typedef {{ findings?: any, error?: string }} AuditOutcome */
+
+/**
+ * @param {string} input trace file, .ndjson archive, or directory
+ * @returns {TraceInput[]}
+ */
 function readTraces(input) {
-  const out = []; // { label, raw, model, timestamp }
+  const out = /** @type {TraceInput[]} */ ([]); // { label, raw, model, timestamp }
   const add = (label, src) => {
     let obj; try { obj = JSON.parse(src); } catch { out.push({ label, raw: src }); return; }
     if (obj && typeof obj === 'object' && !Array.isArray(obj) && 'trace' in obj)
@@ -37,19 +51,33 @@ function readTraces(input) {
   return out;
 }
 
-// audit one trace with a given engine; returns {findings, error}
+/**
+ * @param {any} engine a rules.js engine (current or a --compare load)
+ * @param {string} raw
+ * @param {any} [baseline]
+ * @returns {AuditOutcome}
+ */
 function auditWith(engine, raw, baseline) {
   try { return { findings: BL.apply_baseline(engine.run_rules(engine.parse_trace(raw)), baseline || BL.empty()) }; }
   catch (e) { return { error: e.message }; }
 }
 
 // stable serialisation of a run, used for the determinism kill check
+/**
+ * @param {any} engine
+ * @param {TraceInput[]} traces
+ * @returns {string}
+ */
 const snapshot = (engine, traces) => JSON.stringify(traces.map(t => {
   const r = auditWith(engine, t.raw);
   return r.error ? { e: r.error } : r.findings.map(f => [f.rule, f.severity, f.fingerprint, f.call_id || null]);
 }));
 
-// diff two engines over the same traces: which traces gain/lose findings, and why
+/**
+ * @param {any} a
+ * @param {any} b
+ * @param {TraceInput[]} traces
+ */
 function diffEngines(a, b, traces) {
   return traces.map(t => {
     const ra = auditWith(a, t.raw), rb = auditWith(b, t.raw);
@@ -61,10 +89,15 @@ function diffEngines(a, b, traces) {
   });
 }
 
-// model-upgrade mode: count violations by rule+severity per model id, diff old→new
+/**
+ * @param {any} engine
+ * @param {TraceInput[]} traces
+ * @param {string} oldId
+ * @param {string} newId
+ */
 function diffModels(engine, traces, oldId, newId) {
   const tally = id => {
-    const c = {}; let n = 0;
+    const c = /** @type {Object<string, number>} */ ({}); let n = 0;
     for (const t of traces.filter(t => t.model === id)) {
       n++;
       const r = auditWith(engine, t.raw);
@@ -108,8 +141,8 @@ if (require.main === module) {
       if (!r.gained.length && !r.lost.length) continue;
       changed++;
       console.log(`--- ${r.label}`);
-      for (const f of r.gained) console.log(`  + [${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`);
-      for (const f of r.lost) console.log(`  - [${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`);
+      for (const f of r.gained) console.log(AAA.redactSecrets(`  + [${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`));
+      for (const f of r.lost) console.log(AAA.redactSecrets(`  - [${f.severity}] ${f.rule} ${f.evidence} — ${f.title}`));
     }
     console.log(`\n${changed} of ${traces.length} trace(s) changed between ${AAA.RULES_VERSION || 'current'} and ${other.RULES_VERSION || opt('--compare')}.`);
     process.exit(changed && argv.includes('--fail-on-diff') ? 1 : 0);
@@ -132,7 +165,7 @@ if (require.main === module) {
     if (r.error) { console.error(`[ERROR] ${t.label}: ${r.error}`); continue; }
     const sup = (r.findings.suppressed || []).length;
     total += r.findings.length;
-    console.log(`--- ${t.label}${t.model ? ` [${t.model}]` : ''} : ${AAA.render_report(r.findings).headline}${sup ? ` (${sup} suppressed)` : ''}`);
+    console.log(AAA.redactSecrets(`--- ${t.label}${t.model ? ` [${t.model}]` : ''} : ${AAA.render_report(r.findings).headline}${sup ? ` (${sup} suppressed)` : ''}`));
   }
   console.log(`\nReplayed ${traces.length} trace(s), ${total} active finding(s) total.`);
 }

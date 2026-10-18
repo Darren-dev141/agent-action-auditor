@@ -20,12 +20,7 @@ readStdin((readError, input) => {
     const sid = payload.session_id;
     const prior = S.load(sid);
     const call = S.toCall(payload, prior.length);
-    const calls = prior.concat([call]);
-    const reasons = [];
-    const secrets = AAA.secretsIn(call.rawArgs);
-    if (secrets.length) reasons.push(`R4 secret detected in args (${secrets.join(', ')})`);
-    if (AAA.isIrreversible(call) && !AAA.corroborated(call, calls))
-      reasons.push(`R1 irreversible ${call.name} with no prior read of its target this session`);
+    const reasons = AAA.checkCall(call, prior).map(f => `${f.rule} ${f.title}`);
     if (reasons.length) {
       const block = String(process.env.AAA_MODE || '').toLowerCase() === 'block';
       process.stderr.write(`[auditor] ${block ? 'blocked' : 'would block'}: ` + reasons.join('; ') + '\n');
