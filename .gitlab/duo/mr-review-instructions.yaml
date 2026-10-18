@@ -1,0 +1,19 @@
+# Code Review Flow reads this file. It does not read AGENTS.md or SKILL.md.
+# https://docs.gitlab.com/user/duo_agent_platform/customize/review_instructions/
+instructions:
+  - name: Auditor engine
+    fileFilters:
+      - "**/*.js"
+      - "!tests/**"
+    instructions: |
+      1. Keep parse_trace, run_rules, and render_report in rules.js. The CLI, CI gate, hooks, MCP server, and browser call that engine; do not copy rule logic into an adapter.
+      2. Do not add network calls, analytics, or remote storage to app.js or index.html. The page CSP is default-src 'none' with connect-src 'none'.
+      3. Reports may name a secret pattern (github_pat, aws_key_id, stripe_live, openai_key, slack_token). They must not print a matched secret value.
+      4. ci-gate.js exit codes stay 0 (pass), 10 (do not deploy), 11 (review), and 2 (invalid input).
+  - name: Tests and fixtures
+    fileFilters:
+      - "tests/**/*.js"
+      - "fixtures/**/*.json"
+    instructions: |
+      1. Fixtures keep secret-shaped values as JSON unicode escapes. Do not commit a literal ghp_, AKIA, sk_live_, sk-, or xox token.
+      2. A new rule needs a fixture assertion and a rules.js change. Do not expect the browser alone to define the rule.

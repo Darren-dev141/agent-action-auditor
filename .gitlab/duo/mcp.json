@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "agent-action-auditor": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp-server.js"],
+      "approvedTools": ["audit-a-trace", "check-a-call", "replay"]
+    }
+  }
+}

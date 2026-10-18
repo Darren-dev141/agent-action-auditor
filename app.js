@@ -9,12 +9,19 @@ let reportText='';
 const patterns=AAA.SECRET_PATTERNS.map(([,re])=>re);
 const mask=value=>AAA.redactSecrets(value);
 const hasSecret=text=>patterns.some(re=>re.test(text));
+// Fixtures store secret-shaped values as JSON unicode escapes so the repo
+// text does not contain a literal key. The warning follows the decoded trace.
+const containsSecret=text=>{
+  if(hasSecret(text)) return true;
+  try { return hasSecret(JSON.stringify(JSON.parse(text))); }
+  catch { return false; }
+};
 const decision={R1:'Review authorization and the target before any irreversible action. A prior read alone is not permission.',R2:'Inspect repeated calls and stop an unintended retry loop.',R3:'Remove secret echoes from tool results; rotate credentials if exposed.',R4:'Avoid literal credentials in tool arguments; use a credential vault or scoped secret injection.',R5:'Read back the exact external target and verify the result before claiming success.',R6:'Check whether the operation executed already; use an idempotency key before retrying.',R7:'Attach execution evidence, or change the final message to state that work was not performed.'};
 const example={messages:[{role:'user',content:'Read the project notes.'},{role:'assistant',tool_calls:[{id:'example_read',type:'function',function:{name:'read_file',arguments:'{"path":"notes.md"}'}}]},{role:'tool',tool_call_id:'example_read',content:'Project notes read successfully.'},{role:'assistant',content:'Read the notes.'}]};
 function resetReport(){reportText='';list.replaceChildren();headline.textContent='Ready for a trace';delete headline.dataset.state;stats.textContent='Results stay in this tab. Nothing is submitted.';$('empty-report').hidden=false;$('copy').disabled=true;$('copy-status').textContent='';}
-function updateInput(){const size=new TextEncoder().encode(input.value).length;$('size').textContent=size.toLocaleString()+' bytes';warning.hidden=!hasSecret(input.value);error.hidden=true;error.textContent='';input.setAttribute('aria-invalid','false');resetReport();}
+function updateInput(){const size=new TextEncoder().encode(input.value).length;$('size').textContent=size.toLocaleString()+' bytes';warning.hidden=!containsSecret(input.value);error.hidden=true;error.textContent='';input.setAttribute('aria-invalid','false');resetReport();}
 function fail(message){error.textContent=message;error.hidden=false;input.setAttribute('aria-invalid','true');headline.textContent='Audit not run';stats.textContent='Fix the input to continue.';}
-function audit(){resetReport();error.hidden=true;error.textContent='';input.setAttribute('aria-invalid','false');warning.hidden=!hasSecret(input.value);
+function audit(){resetReport();error.hidden=true;error.textContent='';input.setAttribute('aria-invalid','false');warning.hidden=!containsSecret(input.value);
 if(!input.value.trim()){fail('Paste a trace to begin.');return;}
 if(new TextEncoder().encode(input.value).length>LIMIT){fail('Trace exceeds 1 MiB. Paste a smaller excerpt.');return;}
 try{

@@ -1,27 +1,42 @@
-# Agent Action Auditor — GitLab CI.
-# The audit stage self-gates on the hand-written fixtures: the clean fixture
-# must pass the gate; the two deliberate-violation fixtures must go red.
-# Never gate on `node ci-gate.js --trace fixtures` (the directory run):
-# it exits 10 by design, because two of the three fixtures are violations.
-default:
-  image: node:22-slim          # engines: node >=20.19.0
-  cache:
-    key:
-      files: [package-lock.json]
-    paths: [.npm/]
-  before_script:
-    - npm ci --cache .npm --prefer-offline
-
+# Runs the full `npm test` script: tests/*.test.js (including the two Playwright
+# browser tests), tests/validate-fixtures.js, tests/check-spec-refs.js, and
+# replay determinism. The test job uses the official Playwright image, pinned
+# to the same playwright package version, so those two browser tests run
+# instead of skipping. https://playwright.dev/docs/docker
+# The audit stage self-gates the hand-written fixtures. Never pass the fixtures
+# directory to ci-gate.js: two of the three fixtures are violations, so that
+# directory run exits 10 by design.
 stages: [test, audit]
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+default:
+  interruptible: true
 
 test:
   stage: test
+  image: mcr.microsoft.com/playwright:v1.64.0-noble
+  timeout: 20m
   script:
-    - npm test
+    - npm ci
+    - npm install --no-save --package-lock=false playwright@1.64.0
+    - |
+      set -euo pipefail
+      AAA_CHROME="$(node -e 'const fs=require("node:fs"); const {chromium}=require("playwright"); const p=chromium.executablePath(); if(!fs.existsSync(p)){console.error("Playwright Chromium missing: "+p); process.exit(1);} process.stdout.write(p);')"
+      export AAA_CHROME
+      npm test
+    - npm run security:scan
 
 audit:
   stage: audit
+  image: node:22-slim
   script:
+    - npm ci
     - node ci-gate.js --trace fixtures/fixture_clean.json
     - |
       code=0

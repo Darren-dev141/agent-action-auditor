@@ -2,18 +2,26 @@
 
 Deterministic auditing for agent traces and tool-call behavior. It flags uncorroborated irreversible actions, repeated calls, secret-shaped values, missing read-back, replayed destructive operations, and unsupported completion claims.
 
-The browser demo runs locally. The CLI, hooks, GitHub Action, and MCP server use the same rule engine.
+The browser demo runs locally. The CLI, hooks, GitHub Action, GitLab CI job, and MCP server use the same rule engine.
 
-R1 treats these shell commands as irreversible, including behind `sudo`, `env`, `VAR=value`, `/bin/` paths and `bash -c`/`eval`/`cmd /c`/`pwsh -Command`: `rm -r/-f`, `rmdir`, `rd /s`, `del`, `Remove-Item`, `git push --force`, `git reset --hard`, `git clean -f`, `find -delete`, `find -exec rm`, `dd of=`, `shred`, `terraform destroy`, `kubectl delete`, `DROP TABLE/DATABASE`, `TRUNCATE`. Dry-run forms are excluded. Not detected: shell redirect truncation (`> file`, `: > file`, `>| file`), commands outside this list, and commands hidden in variables, aliases, scripts or encoded payloads. See SPEC D4 and D22.
+## Quickstart
 
-## Install
-
-Requires Node.js 20.19 or newer.
+From a clean clone, with Node.js 20.19 or newer:
 
 ```bash
 npm ci
 npm test
+node audit.js fixtures/fixture_clean.json
+node audit.js fixtures/fixture_violation.json
 ```
+
+`npm test` passes. The two browser tests skip unless Playwright and Chrome are installed. GitLab CI installs them; see below.
+
+You should see `CLEAN — no findings` and exit 0 for the clean fixture, and `4 HIGH · 2 MEDIUM — DO NOT DEPLOY` and exit 10 for the violation fixture.
+
+Open `index.html` in a browser for the same engine without a server. Auditing makes no network requests.
+
+R1 treats these shell commands as irreversible, including behind `sudo`, `env`, `VAR=value`, `/bin/` paths and `bash -c`/`eval`/`cmd /c`/`pwsh -Command`: `rm -r/-f`, `rmdir`, `rd /s`, `del`, `Remove-Item`, `git push --force`, `git reset --hard`, `git clean -f`, `find -delete`, `find -exec rm`, `dd of=`, `shred`, `terraform destroy`, `kubectl delete`, `DROP TABLE/DATABASE`, `TRUNCATE`. Dry-run forms are excluded. Not detected: shell redirect truncation (`> file`, `: > file`, `>| file`), commands outside this list, and commands hidden in variables, aliases, scripts or encoded payloads. See SPEC D4 and D22.
 
 Accepted trace formats:
 
@@ -83,6 +91,12 @@ node audit.js accept trace.json R1:deadbeef \
 node audit.js baseline-diff old.json new.json
 ```
 
+## GitLab CI and Duo
+
+`.gitlab-ci.yml` has two jobs. `test` uses `mcr.microsoft.com/playwright:v1.64.0-noble`, installs `playwright@1.64.0`, points `AAA_CHROME` at that image's Chromium, and runs `npm test` so the browser tests are not skipped. `audit-gate` uses `node:22-bookworm` and requires the clean fixture to exit 0 and the violation fixture to exit 10.
+
+`.gitlab/duo/flows/audit-trace.yml` is a Duo Agent Platform flow. Creating it in a project needs the GitLab UI. `docs/TRANSCEND.md` lists what is already in the repo and what still needs the owner. `docs/DEVPOST.md` is draft form text. Neither file submits the project.
+
 ## Browser demo
 
 Open `index.html` directly or serve the directory as static files. Auditing makes no network requests and stores no traces.
@@ -95,7 +109,7 @@ npm audit
 npm test
 ```
 
-`npm test` runs the Node suite, fixture validator, and replay determinism gate. Browser tests are optional and skip unless Playwright and Chrome are available.
+`npm test` runs the Node suite, fixture validator, and replay determinism gate. Browser tests skip unless Playwright can be required and `AAA_CHROME` (or the default Windows Chrome path) exists. The GitLab `test` job sets both.
 
 A clean report is not proof of authorization, backups, successful writes, or general agent competence. See the browser demo's “What this review cannot prove” section and `SPEC-v1.md` for exact rule limits.
 
@@ -104,9 +118,12 @@ A clean report is not proof of authorization, backups, successful writes, or gen
 - `rules.js` — shared deterministic engine
 - `audit.js` — CLI and baseline adapter
 - `ci-gate.js` / `action.yml` — CI gate and composite GitHub Action
+- `.gitlab-ci.yml` — GitLab test job and deploy gate
+- `.gitlab/duo/` — Duo flow, MCP client, flow setup, and review instructions
 - `replay.js` — archive replay and regression comparison
 - `hooks/` — local pre/post tool hooks with bounded session memory
 - `mcp-server.js` — local stdio MCP server
+- `skills/audit-agent-trace/` — Duo Agent Skill
 - `tests/` and `fixtures/` — acceptance and adversarial tests
 
-License selected (October 2026): MIT, copyright Darren Foote — see `LICENSE`, and `package.json` matches. The package stays marked `private: true` in this working repo until the public launch; set `private: false` only in the public release repo.
+License: MIT, copyright Darren Foote — see `LICENSE`. `package.json` is `"license": "MIT"` and `"private": false`.
