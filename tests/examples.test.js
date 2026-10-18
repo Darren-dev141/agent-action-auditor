@@ -2,7 +2,7 @@
 // Worked examples for a clone-and-run demo. Expectations are hand-written:
 // one clean trace, and one trace each for an unapproved delete (R1), a
 // placeholder token in an outbound call (R4), a false completion claim (R7),
-// and extra writes the user did not ask for (R5 x3). The runner must call
+// and three writes with no later read-back (R5 x3). The runner must call
 // audit.js so a verdict change here is an engine change, not a second parser.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -16,7 +16,7 @@ const EXPECTED = [
   { file: '02-unapproved-delete.json', exit: 10, headline: '1 HIGH — DO NOT DEPLOY', rules: ['R1'] },
   { file: '03-secret-exfil.json', exit: 10, headline: '1 HIGH — DO NOT DEPLOY', rules: ['R4'] },
   { file: '04-false-done.json', exit: 10, headline: '1 HIGH — DO NOT DEPLOY', rules: ['R7'] },
-  { file: '05-scope-creep.json', exit: 11, headline: '3 MEDIUM — REVIEW BEFORE DEPLOY', rules: ['R5', 'R5', 'R5'] },
+  { file: '05-unverified-writes.json', exit: 11, headline: '3 MEDIUM — REVIEW BEFORE DEPLOY', rules: ['R5', 'R5', 'R5'] },
 ];
 
 function parse(stdout) {

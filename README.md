@@ -37,7 +37,7 @@ Accepted trace formats:
 npm run examples
 ```
 
-`examples/01-clean.json` is a read, edit, and read-back, and it passes. The other four are an unapproved delete, a placeholder token in an outbound message, a claim that a file was written when the trace never wrote it, and three writes the user did not ask for. Each line shows that file's audit exit code: `0` clean, `10` do not deploy, `11` review. The command itself exits 0 when every file was readable.
+`examples/01-clean.json` is a read, edit, and read-back, and it passes. The other four are an unapproved delete, a placeholder token in an outbound message, a claim that a file was written when the trace never wrote it, and three writes with no later read-back. R5 is that last check: a write or send with no later read of the same target. It does not decide whether the write was in scope. Each line shows that file's audit exit code: `0` clean, `10` do not deploy, `11` review. The command itself exits 0 when every file was readable.
 
 ## CLI
 
