@@ -1,0 +1,45 @@
+# Pipeline for the GitLab project. The test job uses the official Playwright image
+# so the two browser tests in tests/browser.test.js run instead of skipping.
+# Pin the image and the playwright package to the same version:
+# https://playwright.dev/docs/docker
+stages:
+  - test
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+default:
+  interruptible: true
+
+test:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.64.0-noble
+  timeout: 20m
+  script:
+    - npm ci
+    - npm install --no-save --package-lock=false playwright@1.64.0
+    - |
+      set -euo pipefail
+      AAA_CHROME="$(node -e 'const fs=require("node:fs"); const {chromium}=require("playwright"); const p=chromium.executablePath(); if(!fs.existsSync(p)){console.error("Playwright Chromium missing: "+p); process.exit(1);} process.stdout.write(p);')"
+      export AAA_CHROME
+      npm test
+    - npm run security:scan
+
+# Shows the deploy gate itself: a clean trace exits 0, a violating trace exits 10.
+audit-gate:
+  stage: test
+  image: node:22-bookworm
+  script:
+    - npm ci
+    - node ci-gate.js --trace fixtures/fixture_clean.json
+    - |
+      set -euo pipefail
+      set +e
+      node ci-gate.js --trace fixtures/fixture_violation.json
+      status=$?
+      set -e
+      test "$status" -eq 10

@@ -1,0 +1,7 @@
+# Applied only from the default branch when a Duo flow runs in CI.
+# https://docs.gitlab.com/user/duo_agent_platform/flows/execution/agent-config-yaml/
+# The default flow image already includes Node.js. npm ci is enough to run
+# node ci-gate.js. Do not replace `image` unless that image also meets
+# GitLab's custom flow-image requirements.
+setup_script:
+  - npm ci

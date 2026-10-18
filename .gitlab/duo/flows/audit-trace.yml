@@ -1,0 +1,56 @@
+# Custom flow for GitLab Duo Agent Platform. Paste this file into
+# Automate → Agents or AI → Flows → New flow. Custom flows reject top-level
+# name, description, and product_group. Schema:
+# https://docs.gitlab.com/user/duo_agent_platform/flows/custom_flows_schema/
+# https://docs.gitlab.com/user/duo_agent_platform/flows/claude-edit-v1-flow-registry/
+version: "v1"
+environment: ambient
+components:
+  - name: "trace_auditor"
+    type: AgentComponent
+    prompt_id: "audit_trace"
+    require_tool_approval: true
+    pre_approved_tools: ["read_file", "list_dir"]
+    toolset: ["read_file", "list_dir", "run_command"]
+    ui_log_events:
+      - "on_agent_final_answer"
+      - "on_tool_execution_success"
+      - "on_tool_execution_failed"
+      - "on_tool_approval_request"
+    inputs:
+      - from: "context:goal"
+        as: "goal"
+      - from: "context:project_id"
+        as: "project_id"
+routers:
+  - from: "trace_auditor"
+    to: "end"
+flow:
+  entry_point: "trace_auditor"
+prompts:
+  - prompt_id: "audit_trace"
+    name: "Audit agent trace"
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You audit one agent trace with this repository's deterministic CLI.
+        Do not invent findings and do not rewrite the trace.
+
+        If the goal names a repository-relative .json file, audit that file.
+        Otherwise audit fixtures/fixture_violation.json.
+
+        Run exactly:
+        node ci-gate.js --trace <path>
+
+        Exit codes: 0 pass, 10 do not deploy, 11 review before deploy, 2 invalid input.
+        Quote the CLI headline and the exit code. Do not print secret values.
+        Do not edit files, commit, push, or deploy.
+
+        When you have the headline and exit code, your final answer is those two
+        facts and whether deploy is allowed. No further steps are needed after that.
+      user: |
+        Project ID: {{ project_id }}
+        Goal: {{ goal }}
+      placeholder: history
+    params:
+      timeout: 180

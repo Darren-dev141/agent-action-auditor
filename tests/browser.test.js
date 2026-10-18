@@ -31,7 +31,11 @@ for (const mode of ['file', 'http']) {
       });
       await new Promise(r => server.listen(0,'127.0.0.1',r));
     }
-    const browser = await chromium.launch({executablePath:CHROME,headless:true});
+    // GitLab CI runs as root in the Playwright image, where Chromium's sandbox
+    // and the default /dev/shm size are unusable. Local runs keep the defaults.
+    const launch = {executablePath:CHROME,headless:true};
+    if (process.env.CI) launch.args = ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'];
+    const browser = await chromium.launch(launch);
     try {
       const context = await browser.newContext({viewport:{width:1440,height:1000}});
       // Clipboard is a browser permission boundary; capture it without changing engine behavior.
