@@ -117,9 +117,12 @@ Open `index.html` directly or serve the directory as static files. Auditing make
 npm run security:scan
 npm audit
 npm test
+npm run fuzz
 ```
 
 `npm test` runs the Node suite, fixture validator, and replay determinism gate. Browser tests skip unless Playwright can be required and `AAA_CHROME` (or the default Windows Chrome path) exists. The GitLab `test` job sets both.
+
+`npm run fuzz` fuzzes the trace, baseline, and MCP input parsers — malformed input must be rejected, never crashed on. See `FUZZING.md`.
 
 A clean report is not proof of authorization, backups, successful writes, or general agent competence. See the browser demo's “What this review cannot prove” section and `SPEC-v1.md` for exact rule limits.
 
@@ -136,5 +139,6 @@ A clean report is not proof of authorization, backups, successful writes, or gen
 - `skills/audit-agent-trace/` — Duo Agent Skill
 - `examples/` — worked traces audited by `npm run examples`
 - `tests/` and `fixtures/` — acceptance and adversarial tests
+- `fuzz/` — fuzz harness and seed corpus for the input parsers (see `FUZZING.md`)
 
 License: MIT, copyright Darren Foote — see `LICENSE`. `package.json` is `"license": "MIT"` and `"private": false`.

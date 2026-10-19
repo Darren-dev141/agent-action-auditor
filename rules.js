@@ -142,10 +142,16 @@
     const calls = /** @type {Calls} */ ([]);
     const byId = new Map();
     trace.messages.forEach((m, i) => {
+      if (!m || typeof m !== 'object')
+        throw new ParseError(`message ${i}: expected an object with a role`);
       if (!['system', 'user', 'assistant', 'tool'].includes(m.role))
         throw new ParseError(`message ${i}: unsupported role "${m.role}" (OpenAI JSON only)`);
       if (m.role === 'assistant' && Array.isArray(m.tool_calls)) {
         for (const tc of m.tool_calls) {
+          if (!tc || typeof tc !== 'object' || !tc.function || typeof tc.function !== 'object')
+            throw new ParseError(`message ${i}: tool_calls entry is missing its function object`);
+          if (tc.function.arguments !== undefined && typeof tc.function.arguments !== 'string')
+            throw new ParseError(`message ${i}: arguments for ${tc.id} must be a JSON string`);
           let args;
           try { args = JSON.parse(tc.function.arguments || '{}'); }
           catch { throw new ParseError(`message ${i}: arguments for ${tc.id} are not valid JSON`); }

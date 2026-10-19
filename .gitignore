@@ -1,4 +1,5 @@
 node_modules/
+fuzz/crashes/
 .env
 .env.*
 !.env.example

@@ -1,0 +1,1 @@
+{"description":"Fuzz seed: one MCP normalizeCall input (hook-style call shape).","tool_input":{"path":"notes/status.txt"},"tool_name":"read_file"}

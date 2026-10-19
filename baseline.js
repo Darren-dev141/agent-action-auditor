@@ -25,7 +25,10 @@
    */
 
   const empty = () => ({ version: 1, entries: [] });
-  const clone = b => ({ version: (b && b.version) || 1, entries: ((b && b.entries) || []).map(e => Object.assign({}, e)) });
+  // A baseline arrives from disk / an MCP client: entries may be missing or not
+  // an array at all. Anything that is not an array of entries is no entries.
+  const entriesOf = b => (b && Array.isArray(b.entries)) ? b.entries : [];
+  const clone = b => ({ version: (b && b.version) || 1, entries: entriesOf(b).map(e => Object.assign({}, e)) });
 
   // apply_baseline(findings, baseline) -> active[]  with .suppressed[] and .stats carried over
   /**
@@ -34,7 +37,7 @@
    * @returns {FindingsWithBaseline}
    */
   function apply_baseline(findings, baseline) {
-    const known = new Set(((baseline && baseline.entries) || []).map(e => e.fingerprint));
+    const known = new Set(entriesOf(baseline).map(e => e && e.fingerprint));
     const active = /** @type {FindingsWithBaseline} */ (findings.filter(f => !known.has(f.fingerprint)));
     active.suppressed = findings.filter(f => known.has(f.fingerprint));
     active.stats = findings.stats;
@@ -65,11 +68,11 @@
    * @returns {{ added: BaselineEntry[], removed: BaselineEntry[] }}
    */
   function diff_baselines(a, b) {
-    const fa = new Set(((a && a.entries) || []).map(e => e.fingerprint));
-    const fb = new Set(((b && b.entries) || []).map(e => e.fingerprint));
+    const fa = new Set(entriesOf(a).map(e => e && e.fingerprint));
+    const fb = new Set(entriesOf(b).map(e => e && e.fingerprint));
     return {
-      added: ((b && b.entries) || []).filter(e => !fa.has(e.fingerprint)),
-      removed: ((a && a.entries) || []).filter(e => !fb.has(e.fingerprint)),
+      added: entriesOf(b).filter(e => !fa.has(e && e.fingerprint)),
+      removed: entriesOf(a).filter(e => !fb.has(e && e.fingerprint)),
     };
   }
 

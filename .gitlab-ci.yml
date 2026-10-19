@@ -32,6 +32,17 @@ test:
       npm test
     - npm run security:scan
 
+# Bounded smoke fuzz of the untrusted-input parsers (see FUZZING.md). Fixed
+# seed and iteration cap keep it deterministic and under a minute; the full
+# pass is a manual local run (`npm run fuzz`).
+fuzz:
+  stage: test
+  image: node:22-slim
+  timeout: 10m
+  script:
+    - npm ci
+    - node fuzz/fuzz.js --iterations 500 --max-ms 30000
+
 audit:
   stage: audit
   image: node:22-slim

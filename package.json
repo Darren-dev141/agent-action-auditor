@@ -41,7 +41,8 @@
     "examples": "node scripts/examples.js",
     "mcp": "node mcp-server.js",
     "test": "node --test tests/*.test.js && node tests/validate-fixtures.js && node tests/check-spec-refs.js && node replay.js fixtures --determinism",
-    "security:scan": "node scripts/security-scan.js"
+    "security:scan": "node scripts/security-scan.js",
+    "fuzz": "node fuzz/fuzz.js"
   },
   "engines": {
     "node": ">=20.19.0"
