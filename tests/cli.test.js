@@ -15,10 +15,10 @@ test('CLI JSON returns structured findings without exposing secret-shaped input'
 test('CLI REVIEW trace (>=3 MEDIUM, 0 HIGH) exits 11 via EXIT[report.kind]', () => {
   const fs = require('node:fs');
   const os = require('node:os');
-  // Three unverified write_file calls -> three R5 MEDIUM findings, no HIGH.
+  // Three unverified HTTP POSTs -> three R5 MEDIUM findings, no HIGH.
   const calls = ['a.txt', 'b.txt', 'c.txt'].map((p, i) => ({
     id: `w${i + 1}`, type: 'function',
-    function: { name: 'write_file', arguments: JSON.stringify({ path: p, content: 'x' }) }
+    function: { name: 'http_request', arguments: JSON.stringify({ method: 'POST', url: 'https://api.example.com/' + p, body: 'x' }) }
   }));
   const trace = { messages: [
     { role: 'user', content: 'write the files' },

@@ -2,7 +2,7 @@
 // Worked examples for a clone-and-run demo. Expectations are hand-written:
 // one clean trace, and one trace each for an unapproved delete (R1), a
 // placeholder token in an outbound call (R4), a false completion claim (R7),
-// and three writes with no later read-back (R5 x3). The runner must call
+// and three external POSTs with no later read-back (R5 x3). The runner must call
 // audit.js so a verdict change here is an engine change, not a second parser.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -35,7 +35,8 @@ function parse(stdout) {
   return blocks;
 }
 
-const ran = spawnSync('npm', ['run', '--silent', 'examples'], { cwd: root, encoding: 'utf8' });
+// Same command `npm run examples` runs; spawning node directly works on Windows, where 'npm' is npm.cmd.
+const ran = spawnSync(process.execPath, [path.join(root, 'scripts', 'examples.js')], { cwd: root, encoding: 'utf8' });
 
 test('npm run examples prints the expected verdict for each worked example', () => {
   const runner = path.join(root, 'scripts', 'examples.js');

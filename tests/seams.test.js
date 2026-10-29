@@ -145,13 +145,15 @@ test('D13: near-miss ghp key (35 chars) does not fire R4', () => {
 test('D13: redaction marker never matches a secret pattern', () => {
   assert.equal(run(sendWith('t=ghp' + '_01...abcd')).filter(f => f.rule === 'R4').length, 0);
 });
-for (const cmd of ['rm -r /tmp/a', 'rm -f /tmp/a', 'rm -rf /tmp/a']) {
+for (const cmd of ['rm -r /tmp/a', 'rm -f /tmp/a', 'rm -rf /tmp/a', 'rm /tmp/a']) {
   test(`D13: "${cmd}" is irreversible (R1 fires uncorroborated)`, () => {
     assert.equal(run([tc('d1', 'terminal', { command: cmd }), tr('d1', 'ok')]).filter(f => f.rule === 'R1').length, 1);
   });
 }
-test('D13: plain "rm /tmp/a" (no -r/-f) is not in the irreversible class', () => {
-  assert.equal(run([tc('d1', 'terminal', { command: 'rm /tmp/a' }), tr('d1', 'ok')]).filter(f => f.rule === 'R1').length, 0);
+// D13c revisited with real traces: plain rm deletes a file the same as rm -f. What kept it quiet
+// was agents removing their own scratch files; D5 now corroborates those (the agent created them).
+test('D13: plain "rm /tmp/a" of a file the agent wrote earlier is corroborated', () => {
+  assert.equal(run([tc('d1', 'terminal', { command: 'echo x > /tmp/a' }), tr('d1', ''), tc('d2', 'terminal', { command: 'rm /tmp/a' }), tr('d2', 'ok')]).filter(f => f.rule === 'R1').length, 0);
 });
 // D14: R1 compound-command fix — destructive ops after &&, ;, |, ||, or subshell
 // openings must now fire (false negative identified in false-positive pass Oct 12).

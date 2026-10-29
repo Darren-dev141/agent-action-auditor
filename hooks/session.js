@@ -12,13 +12,6 @@ const NAME_MAP = AAA.TOOL_NAME_MAP;
 const MAX_SESSION_BYTES = 1024 * 1024;
 const MAX_SESSION_ENTRIES = 2000;
 
-function plainObject(value) {
-  const out = Object.create(null);
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
-  for (const key of Object.keys(value)) out[key] = value[key];
-  return out;
-}
-
 /**
  * @param {any} payload Claude Code hook payload ({tool_name, tool_input} or {tool, args} shapes)
  * @param {number} index position in the session's call sequence
@@ -26,12 +19,10 @@ function plainObject(value) {
  */
 function toCall(payload, index) {
   const raw = payload.tool_name || (payload.tool && payload.tool.name) || '';
-  const name = NAME_MAP[String(raw).toLowerCase()] || String(raw).toLowerCase();
+  const name = AAA.mapName(raw);
   let args = payload.tool_input || payload.args || {};
   if (typeof args === 'string') { try { args = JSON.parse(args); } catch { args = { value: args }; } }
-  args = plainObject(args);
-  if (args.file_path && !args.path) args.path = args.file_path;
-  if (args.notebook_path && !args.path) args.path = args.notebook_path;
+  args = AAA.mapArgs(args);
   const rawArgs = JSON.stringify(args);
   return { id: `live_${index}`, index, tool: name, name, args, rawArgs, output: null, result: null };
 }
@@ -84,7 +75,7 @@ function load(id) {
     if (lines.length > MAX_SESSION_ENTRIES) return [];
     return lines.map((ln, i) => {
       const r = JSON.parse(ln);
-      const args = plainObject(r.args);
+      const args = AAA.mapArgs(r.args);
       return { id: `live_${i}`, index: i, tool: r.name, name: r.name, args, rawArgs: JSON.stringify(args), output: null, result: null };
     });
   } catch { return []; }
