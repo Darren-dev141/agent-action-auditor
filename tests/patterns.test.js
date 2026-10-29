@@ -24,7 +24,19 @@ const SAMPLES = [
   ['openai_key', 'sk-' + rep('a', 20), ['sk-' + rep('a', 19), 'please ask-me-anything today']],
   ['openai_key', 'sk-proj-' + rep('a', 20), []],
   ['slack_token', 'xoxb-' + rep('a', 10), ['xoxb-' + rep('a', 9), 'xoxz-' + rep('a', 10)]],
+  ['anthropic_key', 'sk-ant-api03-' + rep('a', 20), ['sk-ant-' + rep('a', 19)]],
+  ['github_fine_grained', 'github_pat_' + rep('A1', 11), ['github_pat_' + rep('A', 21)]],
+  ['gitlab_pat', 'glpat-' + rep('a', 20), ['glpat-' + rep('a', 19)]],
+  ['google_api_key', 'AIza' + rep('B', 35), ['AIza' + rep('B', 34), 'AIza' + rep('B', 36)]],
+  ['stripe_restricted', 'rk_live_' + rep('a', 24), ['rk_live_' + rep('a', 23)]],
+  ['slack_webhook', 'hooks.slack.com/services/T0/B0/' + rep('X', 20), ['hooks.slack.com/services/T0/B0/' + rep('X', 19)]],
+  ['private_key', '-----BEGIN RSA ' + 'PRIVATE KEY-----', ['-----BEGIN PUBLIC KEY-----']],
+  ['aws_secret_key', 'aws_secret_access_key=' + rep('Ab1/', 10), ['aws_secret_access_key=' + rep('a', 39)]],
 ];
+
+test('D26: an Anthropic key is named as one, not also as an OpenAI key', () => {
+  assert.deepEqual(AAA.secretsIn('sk-ant-api03-' + rep('a', 30)), ['anthropic_key']);
+});
 
 test('D3 parity: engine fires on full samples, silent on near-misses', () => {
   for (const [name, full, misses] of SAMPLES) {

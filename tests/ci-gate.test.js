@@ -97,7 +97,7 @@ test('Gate 1 fix 2: R8 is selectable in config and baselinable without invalidat
     fs.writeFileSync(config, 'severity: MEDIUM\nrules: [R8]\nbaseline: base.json\n');
     const accepted = gate(['--trace', trace, '--config', config]);
     assert.equal(accepted.status, 0, accepted.stderr);
-    fs.writeFileSync(config, 'rules: [R9]\n');
+    fs.writeFileSync(config, 'rules: [R99]\n');
     assert.equal(gate(['--trace', trace, '--config', config]).status, 2, 'unknown rule ids still rejected');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });

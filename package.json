@@ -42,7 +42,9 @@
     "mcp": "node mcp-server.js",
     "test": "node --test tests/*.test.js && node tests/validate-fixtures.js && node tests/check-spec-refs.js && node replay.js fixtures --determinism",
     "security:scan": "node scripts/security-scan.js",
-    "fuzz": "node fuzz/fuzz.js"
+    "fuzz": "node fuzz/fuzz.js",
+    "verify": "node verify/r1-gate.js",
+    "verify:mutants": "node verify/mutants.js"
   },
   "engines": {
     "node": ">=20.19.0"
